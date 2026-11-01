@@ -36,7 +36,7 @@ jobs:
           python -m pip install --upgrade pip aqtinstall
           
           # Qt 6.8.0 Windows MSVC 2022 C++ paketlerini indir
-          python -m aqt install-qt windows desktop 6.8.0 win64_msvc2022_64 -m qtnetwork --outputdir C:\Qt
+          python -m aqt install-qt windows desktop 6.8.0 win64_msvc2022_64 --outputdir C:\Qt
           
           # CMake ve sistemin Qt'yi bulabilmesi için ortam değişkenlerini ayarla
           $qtPath = "C:\Qt\6.8.0\msvc2022_64"
