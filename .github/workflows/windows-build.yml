@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Ninja ve CMake Kurulumu
-        uses: numa08/setup-ninja@v1.2
+        run: choco install ninja
 
       - name: MSVC Derleyici Ortamını Hazırla
         uses: ilammy/msvc-dev-cmd@v1
