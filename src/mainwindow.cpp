@@ -23,9 +23,9 @@ MainWindow::MainWindow(QWidget *parent)
         ui->lblUpdateStatus->setText("Uygulama Başlatılıyor.");
 
     #if defined (Q_OS_WIN)
-        QString appPath = QDir(Config::get_running_dir()).filePath("KishiPanel.exe");
+        QString appPath = QDir(Config::get_running_dir()).filePath("app/KishiPanel.exe");
     #else
-        QString appPath = QDir(Config::get_running_dir()).filePath("KishiPanel");
+        QString appPath = QDir(Config::get_running_dir()).filePath("app/KishiPanel");
     #endif
 
     QProcess process;

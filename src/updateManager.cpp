@@ -107,16 +107,13 @@ void UpdateManager::startUpdateProcess(const QJsonObject &networkJson, const QJs
 }
 
 void UpdateManager::processNextDownload() {
-    // Kuyruk bitti mi?
-
-
     // Sıradaki dosyayı kuyruktan çek
     auto currentTask = _downloadQueue.dequeue();
     QString downloadUrl = currentTask.first;
     QString relativePath = currentTask.second;
 
     QDir dir(Config::get_running_dir());
-    QString targetFilePath = dir.filePath(relativePath);
+    QString targetFilePath = dir.filePath("app/" + relativePath);
 
     QNetworkRequest request((QUrl(downloadUrl)));
     request.setRawHeader("x-api-key", Config::API_KEY.toUtf8()); // Gerekirse API key ekleyin
