@@ -23,7 +23,7 @@ jobs:
 
       # 2. Ninja kurulumu
       - name: Ninja Kurulumu
-        uses: ninja-build/setup-ninja@v1
+        run: choco install ninja
 
       # 3. MSVC Derleyici ortamını yükle
       - name: MSVC Derleyici Ortamını Hazırla
