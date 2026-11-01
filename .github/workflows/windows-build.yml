@@ -15,6 +15,11 @@ jobs:
       - name: Kodu Klonla (Checkout)
         uses: actions/checkout@v4
 
+      - name: Python Ortamını Hazırla
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Ninja ve CMake Kurulumu
         run: choco install ninja
 
@@ -25,7 +30,7 @@ jobs:
       - name: Qt Kurulumu (aqtinstall ile)
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.11.2' # Kullandığınız Qt 6 sürümü (örn: 6.5.3 veya 6.6.3)
+          version: '6.6.3' # Kullandığınız Qt 6 sürümü (örn: 6.5.3 veya 6.6.3)
           host: 'windows'
           target: 'desktop'
           arch: 'win64_msvc2022_64'
