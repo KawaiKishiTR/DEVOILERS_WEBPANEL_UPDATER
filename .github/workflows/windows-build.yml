@@ -1,0 +1,62 @@
+name: Windows Build & Package
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: # Manuel olarak Actions sekmesinden tetiklemek için
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Kodu Klonla (Checkout)
+        uses: actions/checkout@v4
+
+      - name: Ninja ve CMake Kurulumu
+        uses: numa08/setup-ninja@v1.2
+
+      - name: MSVC Derleyici Ortamını Hazırla
+        uses: ilammy/msvc-dev-cmd@v1
+
+      # Qt 6 ve gerekli modülleri (Widgets, Network) yükleme
+      - name: Qt Kurulumu (aqtinstall ile)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.11.2' # Kullandığınız Qt 6 sürümü (örn: 6.5.3 veya 6.6.3)
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2022_64'
+          modules: 'qtnetwork' # Network ve Widgets varsayılan olarak dahildir
+
+      - name: CMake Yapılandırması (Configure)
+        run: |
+          cmake -B build -G "Ninja" `
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Projeyi Derle (Build)
+        run: |
+          cmake --build build --config Release
+
+      - name: Bağımlılıkları Topla (windeployqt)
+        run: |
+          mkdir dist
+          # .exe dosyasını nerede olursa olsun bulup kopyalar:
+          $exePath = (Get-ChildItem -Path build -Filter "QT_WEBPANEL_UPDATER.exe" -Recurse).FullName
+          Copy-Item $exePath dist\
+          
+          # Qt DLL'lerini dist klasörüne toplar
+          windeployqt --release --no-translations dist\QT_WEBPANEL_UPDATER.exe
+
+      - name: Çıktıyı ZIP Olarak Paketle
+        run: |
+          Compress-Archive -Path dist\* -DestinationPath QT_WEBPANEL_UPDATER-Windows.zip
+
+      - name: İndirilebilir Paket Olarak Yükle (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: QT_WEBPANEL_UPDATER-Windows
+          path: QT_WEBPANEL_UPDATER-Windows.zip
+          retention-days: 14
