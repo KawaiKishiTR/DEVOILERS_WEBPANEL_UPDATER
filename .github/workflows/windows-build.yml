@@ -15,27 +15,33 @@ jobs:
       - name: Kodu Klonla (Checkout)
         uses: actions/checkout@v4
 
+      # 1. Temiz ve standart Python 3.11 ortamı
       - name: Python Ortamını Hazırla
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Ninja ve CMake Kurulumu
-        run: choco install ninja
+      # 2. Ninja kurulumu
+      - name: Ninja Kurulumu
+        uses: ninja-build/setup-ninja@v1
 
+      # 3. MSVC Derleyici ortamını yükle
       - name: MSVC Derleyici Ortamını Hazırla
         uses: ilammy/msvc-dev-cmd@v1
 
-      # Qt 6 ve gerekli modülleri (Widgets, Network) yükleme
-      - name: Qt Kurulumu (aqtinstall ile)
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.6.3' # Kullandığınız Qt 6 sürümü (örn: 6.5.3 veya 6.6.3)
-          host: 'windows'
-          target: 'desktop'
-          arch: 'win64_msvc2022_64'
-          modules: 'qtnetwork' # Network ve Widgets varsayılan olarak dahildir
-
+      # 4. aqtinstall'ı doğrudan kurup resmi Qt 6.8.0 sürümünü indiriyoruz
+      - name: Qt Kurulumu (Manuel aqtinstall)
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip aqtinstall
+          
+          # Qt 6.8.0 Windows MSVC 2022 C++ paketlerini indir
+          python -m aqt install-qt windows desktop 6.8.0 win64_msvc2022_64 -m qtnetwork --outputdir C:\Qt
+          
+          # CMake ve sistemin Qt'yi bulabilmesi için ortam değişkenlerini ayarla
+          $qtPath = "C:\Qt\6.8.0\msvc2022_64"
+          echo "CMAKE_PREFIX_PATH=$qtPath" >> $env:GITHUB_ENV
+          echo "$qtPath\bin" >> $env:GITHUB_PATH
       - name: CMake Yapılandırması (Configure)
         run: |
           cmake -B build -G "Ninja" `

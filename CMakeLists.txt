@@ -36,7 +36,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         ${PROJECT_SOURCES}
 
         app_icon.rc
-        dock_logo.png
+        logo.ico
         resources/resources.qrc
     )
 
