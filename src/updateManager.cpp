@@ -1,5 +1,6 @@
 #include "updateManager.h"
 #include <QDir>
+#include <iostream>
 
 
 namespace Update {
@@ -27,18 +28,29 @@ void UpdateManager::check_update() {
     QNetworkReply *reply = getRequest(request);
     onManifestReceived(reply);
 
+    if (!_downloadQueue.isEmpty()) {
+        std::cout << "Toplam indirilecek dosya adedi:" << _downloadQueue.size() << std::endl;
+    } else {
+        std::cout << "Indirilecek yeni dosya yok." << std::endl;
+    }
+
     while (!_downloadQueue.isEmpty()) {
+        updateHappened = true;
         processNextDownload();
     }
 
-    qDebug() << "Tum guncelleme dosyalari basariyla indirildi!";
+    if (!updateHappened) {
+        return;
+    }
+
+    std::cout << "Tum guncelleme dosyalari basariyla indirildi!" << std::endl;
     
     // Yeni manifesti diske yerel manifest olarak kaydet
     QFile mFile(get_manifest_file());
     if (mFile.open(QIODevice::WriteOnly)) {
         mFile.write(QJsonDocument(_pendingManifest).toJson());
         mFile.close();
-        qDebug() << "Yerel manifest.json guncellendi.";
+        std::cout << "Yerel manifest.json guncellendi." << std::endl;
     }
     return;
 
@@ -46,28 +58,29 @@ void UpdateManager::check_update() {
 
 void UpdateManager::onManifestReceived(QNetworkReply *reply) {
 if (reply->error() != QNetworkReply::NoError) {
-        qDebug() << "Manifest Indirme Hatasi: " << reply->errorString();
+        std::cout << "Manifest Indirme Hatasi: " << reply->errorString().toStdString() << std::endl;
         reply->deleteLater();
         return;
     }
 
     QJsonObject networkJson = this->jsonParse(reply->readAll());
+    reply->deleteLater();
     QJsonObject localJson = this->get_local_manifest();
 
     QString netVersionHash = networkJson["version_hash"].toString();
     QString locVersionHash = localJson["version_hash"].toString();
 
+    std::cout << "Yerel  Manifest hash: " << locVersionHash.toStdString() << std::endl;
+    std::cout << "Online Manifest hash: " << netVersionHash.toStdString() << std::endl;
     // Sürümler aynıysa güncellemeye gerek yok
     if (!netVersionHash.isEmpty() && locVersionHash == netVersionHash) {
-        qDebug() << "Uygulama zaten en guncel surumde.";
-        reply->deleteLater();
+        std::cout << "Uygulama zaten en guncel surumde." << std::endl;
         return;
     }
 
-    qDebug() << "Guncelleme tespit edildi. Dosya karsilastirmasi baslatiliyor...";
+    std::cout << "Guncelleme tespit edildi. Dosya karsilastirmasi baslatiliyor..." << std::endl;
     startUpdateProcess(networkJson, localJson);
 
-    reply->deleteLater();
 }
 
 void UpdateManager::startUpdateProcess(const QJsonObject &networkJson, const QJsonObject &localJson) {
@@ -94,15 +107,8 @@ void UpdateManager::startUpdateProcess(const QJsonObject &networkJson, const QJs
             QString fileDownloadUrl = serverBaseUrl + "/" + relativePath;
 
             _downloadQueue.enqueue(qMakePair(fileDownloadUrl, relativePath));
-            qDebug() << "Guncellenecek dosya bulundu:" << relativePath;
+            std::cout << "Guncellenecek dosya bulundu:" << relativePath.toStdString() << std::endl;
         }
-    }
-
-    // 2. İndirme kuyruğunu başlat
-    if (!_downloadQueue.isEmpty()) {
-        qDebug() << "Toplam indirilecek dosya adedi:" << _downloadQueue.size();
-    } else {
-        qDebug() << "Indirilecek yeni dosya yok.";
     }
 }
 
@@ -113,7 +119,7 @@ void UpdateManager::processNextDownload() {
     QString relativePath = currentTask.second;
 
     QDir dir(Config::get_running_dir());
-    QString targetFilePath = dir.filePath("app/" + relativePath);
+    QString targetFilePath = dir.filePath("update/" + relativePath);
 
     QNetworkRequest request((QUrl(downloadUrl)));
     request.setRawHeader("x-api-key", Config::API_KEY.toUtf8()); // Gerekirse API key ekleyin
@@ -122,7 +128,7 @@ void UpdateManager::processNextDownload() {
     QNetworkReply *reply = getRequest(request);
 
     if (reply->error() != QNetworkReply::NoError) {
-        qDebug() << "Dosya indirme hatasi (" << targetFilePath << "):" << reply->errorString();
+        std::cout << "Dosya indirme hatasi (" << targetFilePath.toStdString() << "):" << reply->errorString().toStdString() << std::endl;
         reply->deleteLater();
     }
 
@@ -138,9 +144,9 @@ void UpdateManager::processNextDownload() {
     if (file.open(QIODevice::WriteOnly)) {
         file.write(reply->readAll());
         file.close();
-        qDebug() << "Dosya indirildi ve yazildi:" << targetFilePath;
+        std::cout << "Dosya indirildi ve yazildi:" << targetFilePath.toStdString() << std::endl;
     } else {
-        qDebug() << "Dosya yazma hatasi:" << file.errorString();
+        std::cout << "Dosya yazma hatasi:" << file.errorString().toStdString() << std::endl;
     }
 
     reply->deleteLater();
@@ -152,15 +158,14 @@ QJsonObject UpdateManager::jsonParse(const QByteArray &InputData) {
     QJsonDocument doc = QJsonDocument::fromJson(InputData, &parseError);
 
     if (parseError.error != QJsonParseError::NoError) {
-        qDebug() << "JSON Ayrıştırma Hatası:" << parseError.errorString();
-        return QJsonObject();
+        std::cout << "JSON Ayrıştırma Hatası:" << parseError.errorString().toStdString() << std::endl;
+        throw std::runtime_error("Json ayrıştırma hatası");
     }
 
-    if (doc.isObject()) {
-        return doc.object();
+    if (!doc.isObject()) {
+        throw std::runtime_error("Json bir obje değil");
     }
-
-    return QJsonObject();
+    return doc.object();
 }
 
 void UpdateManager::_downloadProgress(qint64 bytesReceived, qint64 bytesTotal) {

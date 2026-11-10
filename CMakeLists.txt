@@ -23,7 +23,6 @@ set(PROJECT_SOURCES
 
         ui/mainwindow.ui
 
-        src/config.cpp
         src/mainwindow.cpp
         src/updateManager.cpp
 
@@ -89,4 +88,19 @@ install(TARGETS QT_WEBPANEL_UPDATER
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(QT_WEBPANEL_UPDATER)
+endif()
+
+# -------------------------------------------------------------
+# 2. HEDEF: Bağımsız Taşıyıcı Patcher (Saf C++ - Sıfır Qt Bağımlılığı)
+# -------------------------------------------------------------
+# Saf C++ kaynak dosyasını tanımla
+add_executable(updater_patcher
+    src/patcher/update_patcher.cpp
+)
+
+# Windows'ta arkada siyah terminal penceresi açılmadan sessizce çalışsın:
+if(WIN32)
+    set_target_properties(updater_patcher PROPERTIES
+        WIN32_EXECUTABLE ON
+    )
 endif()

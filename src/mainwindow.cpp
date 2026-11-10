@@ -20,29 +20,34 @@ MainWindow::MainWindow(QWidget *parent)
     QTimer::singleShot(50, [this](){
         updateManager->check_update();
         ui->progressBar->hide();
-        ui->lblUpdateStatus->setText("Uygulama Başlatılıyor.");
-
-    #if defined (Q_OS_WIN)
-        QString appPath = QDir(Config::get_running_dir()).filePath("app/KishiPanel.exe");
-    #else
-        QString appPath = QDir(Config::get_running_dir()).filePath("app/KishiPanel");
-    #endif
-
+    
     QProcess process;
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
 
     env.insert(Config::ENV_KEY, Config::SECRET_KEY);
-
+    
     process.setProcessEnvironment(env);
-    process.setProgram(appPath);
+    if (updateManager->updateHappened) {
+        ui->lblUpdateStatus->setText("Güncellemeler kuruluyor.");
+        process.setProgram(Config::get_patcherPath());
+        QStringList args;
+        args << QString::number(QCoreApplication::applicationPid());
+        process.setArguments(args);
+    } else {
+        ui->lblUpdateStatus->setText("Uygulama Başlatılıyor.");
+        process.setProgram(Config::get_appPath());
+    }
 
     qint64 pid = 0;
     bool success = process.startDetached(&pid);
 
     if (success) {
-        qDebug() << "Uygulama basariyla baslatildi. PID: " << pid;
+        std::cout << "Uygulama basariyla baslatildi. PID: " << pid << std::endl;
+        this->close();
+        QApplication::quit();
+        std::exit(0);
     } else {
-        qDebug() << "Uygulama baslatilamadi:" << process.errorString();
+        std::cout << "Uygulama baslatilamadi:" << process.errorString().toStdString() << std::endl;
         ui->lblUpdateStatus->setText("Hata: Uygulama başlatılamadı!");
     }});
 }
@@ -64,8 +69,6 @@ void MainWindow::setup() {
 
     ui->lblLogo->setPixmap(kucultulmusResim);
 }
-
-
 
 MainWindow::~MainWindow()
 {

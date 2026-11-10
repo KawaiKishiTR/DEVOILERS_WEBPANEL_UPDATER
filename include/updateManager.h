@@ -13,6 +13,7 @@
 #include <QPair>
 #include <QDebug>
 #include <QMainWindow>
+#include <iostream>
 
 
 namespace Update {
@@ -23,6 +24,7 @@ public:
     void check_update();
 
     inline void set_ui(Ui::MainWindow* ui) {_ui = ui;}
+    bool updateHappened{false};
 
 private slots:
     void processNextDownload();
@@ -35,7 +37,17 @@ private:
     QNetworkReply* getRequest(QNetworkRequest &request);
 
     inline QJsonObject get_local_manifest() {
-        return jsonParse(QFile(get_manifest_file()).readAll());}
+        QFile mFile = QFile(get_manifest_file());
+        if (mFile.exists()) {
+            if (!mFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                return QJsonObject();
+            }
+            std::cout << "Manifest Dosyası Doğru Şekilde okundu." << std::endl;
+            QByteArray mData = mFile.readAll();
+            mFile.close();
+            return jsonParse(mData);
+        }
+        return QJsonObject();}
     inline QString get_update_endpoint() {
         return Config::get_url() + "/version/" + Config::OS_TYPE;}
     inline QFile get_manifest_file() {
