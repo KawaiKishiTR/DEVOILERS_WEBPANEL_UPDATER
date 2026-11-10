@@ -98,9 +98,13 @@ add_executable(updater_patcher
     src/patcher/update_patcher.cpp
 )
 
-# Windows'ta arkada siyah terminal penceresi açılmadan sessizce çalışsın:
+# Windows'ta siyah konsol penceresi açılmasın ama standart int main() kullanılsın:
 if(WIN32)
     set_target_properties(updater_patcher PROPERTIES
         WIN32_EXECUTABLE ON
     )
+    if(MSVC)
+        # /subsystem:windows altındayken standart main() fonksiyonunu giriş noktası yapar:
+        target_link_options(updater_patcher PRIVATE "/ENTRY:mainCRTStartup")
+    endif()
 endif()
