@@ -96,13 +96,38 @@ int main(int argc, char* argv[]) {
         // 3. Güncellenen Updater'ı ana dizindeki mutlak yolundan tekrar başlat
         fs::path updaterExe = rootDir / 
     #if defined(_WIN32)
-            "QT_WEBPANEL_UPDATER.exe";
-        STARTUPINFO si = { sizeof(si) };
+        "QT_WEBPANEL_UPDATER.exe";
+
+        STARTUPINFOW si;
         PROCESS_INFORMATION pi;
+        ZeroMemory(&si, sizeof(si));
+        si.cb = sizeof(si);
+        ZeroMemory(&pi, sizeof(pi));
+
+        // Windows CreateProcessW komut satırını değiştirebileceği için dinamik bir buffer açılır:
         std::wstring cmd = updaterExe.wstring();
-        CreateProcessW(NULL, cmd.data(), NULL, NULL, FALSE, DETACHED_PROCESS, NULL, rootDir.wstring().c_str(), &si, &pi);
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
+        std::vector<wchar_t> cmdBuffer(cmd.begin(), cmd.end());
+        cmdBuffer.push_back(L'\0'); // Null-terminator
+
+        std::wstring workDir = rootDir.wstring();
+
+        BOOL success = CreateProcessW(
+            NULL,                      // Uygulama adı (komut satırından çözülecek)
+            cmdBuffer.data(),          // Komut satırı (LPWSTR - değiştirilebilir buffer)
+            NULL,                      // Süreç güvenlik nitelikleri
+            NULL,                      // Thread güvenlik nitelikleri
+            FALSE,                     // Tanıtıcıları miras alma
+            DETACHED_PROCESS,          // Bağımsız süreç bayrağı
+            NULL,                      // Yeni ortam bloğu
+            workDir.c_str(),           // Çalışma dizini (LPCWSTR)
+            &si,                       // Başlangıç bilgisi (LPSTARTUPINFOW)
+            &pi                        // Süreç bilgisi
+        );
+
+        if (success) {
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+        }
     #else
             "QT_WEBPANEL_UPDATER";
         if (fork() == 0) {
