@@ -33,7 +33,14 @@ inline QString get_patcherPath() {
 #endif
     return patcherPath;
 }
-
+inline QString get_patcherTempPath() {
+#if defined (Q_OS_WIN)
+    QString patcherPath = QDir(Config::get_running_dir()).filePath("temp/updater_patcher.exe");
+#else
+    QString patcherPath = QDir(Config::get_running_dir()).filePath("temp/updater_patcher");
+#endif
+    return patcherPath;
+}
 
 // UPDATER and APPLICATION TRUST KEY
 inline const QString ENV_KEY      = "LAUNCHED_BY";

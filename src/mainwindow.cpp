@@ -25,13 +25,52 @@ MainWindow::MainWindow(QWidget *parent)
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
 
     env.insert(Config::ENV_KEY, Config::SECRET_KEY);
+
+    if (QFile(Config::get_patcherTempPath()).exists()) {
+        QFile(Config::get_patcherTempPath()).moveToTrash();
+    }
     
     process.setProcessEnvironment(env);
     if (updateManager->updateHappened) {
         ui->lblUpdateStatus->setText("Güncellemeler kuruluyor.");
-        process.setProgram(Config::get_patcherPath());
+        QFile target(Config::get_patcherTempPath());
+        QFile file(Config::get_patcherPath());
+
+
+        // 1. Hedef dosyanın parent directory yolunu al
+        QFileInfo targetInfo(target);
+        QDir targetDir = targetInfo.dir();
+
+        // 2. Klasör diskte yoksa oluştur (iç içe tüm alt klasörleri açar - mkdir -p)
+        if (!targetDir.exists()) {
+            if (!targetDir.mkpath(".")) {
+                ui->lblUpdateStatus->setText("Hedef klasör oluşturulamadı!");
+                return;
+            }
+        }
+
+
+        if (!file.open(QIODevice::ReadOnly)) {
+            ui->lblUpdateStatus->setText("Dosya Okuma Hatası!");
+            return;
+        }
+        if (!target.open(QIODevice::WriteOnly)) {
+            ui->lblUpdateStatus->setText("Dosya Yazma Hatası!");
+            return;
+        }
+        target.write(file.readAll());
+        target.close();
+        file.close();
+
+        target.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner |
+        QFileDevice::ReadGroup | QFileDevice::ExeGroup |
+        QFileDevice::ReadOther | QFileDevice::ExeOther
+        );
+
+        process.setProgram(Config::get_patcherTempPath());
         QStringList args;
         args << QString::number(QCoreApplication::applicationPid());
+        args << Config::get_running_dir();
         process.setArguments(args);
     } else {
         ui->lblUpdateStatus->setText("Uygulama Başlatılıyor.");

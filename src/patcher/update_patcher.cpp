@@ -56,10 +56,15 @@ int main(int argc, char* argv[]) {
     }
 
     int updaterPid = 0;
-    if (argc >= 2) {
+    fs::path rootDir;
+    if (argc >= 3) {
         updaterPid = std::stoi(argv[1]);
+        rootDir = fs::u8path(argv[2]);
+    } else {
+        return 1;
     }
 
+    std::cout << rootDir.c_str() << std::endl;
     // 1. Updater'ın işletim sisteminden tamamen silinmesini bekle (Kilit kalksın)
     if (updaterPid > 0) {
         int retry = 0;
@@ -72,7 +77,6 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-        fs::path rootDir = getExecutableDir();
         fs::path updateDir = rootDir / "update";
 
         // 2. Eğer updater/ klasörü varsa, içindekileri ana dizine taşı
@@ -89,21 +93,25 @@ int main(int argc, char* argv[]) {
             fs::remove_all(updateDir);
         }
 
-        // 3. Güncellenen Updater'ı ana dizinden tekrar başlat
-#if defined(_WIN32)
+        // 3. Güncellenen Updater'ı ana dizindeki mutlak yolundan tekrar başlat
+        fs::path updaterExe = rootDir / 
+    #if defined(_WIN32)
+            "QT_WEBPANEL_UPDATER.exe";
         STARTUPINFO si = { sizeof(si) };
         PROCESS_INFORMATION pi;
-        std::string cmd = "QT_WEBPANEL_UPDATER.exe";
-        CreateProcess(NULL, cmd.data(), NULL, NULL, FALSE, DETACHED_PROCESS, NULL, NULL, &si, &pi);
+        std::wstring cmd = updaterExe.wstring();
+        CreateProcessW(NULL, cmd.data(), NULL, NULL, FALSE, DETACHED_PROCESS, NULL, rootDir.wstring().c_str(), &si, &pi);
         CloseHandle(pi.hProcess);
         CloseHandle(pi.hThread);
-#else
+    #else
+            "QT_WEBPANEL_UPDATER";
         if (fork() == 0) {
             setsid();
-            execl("./QT_WEBPANEL_UPDATER", "./QT_WEBPANEL_UPDATER", (char*)NULL);
+            chdir(rootDir.c_str()); // Çalışma dizinini ana klasöre çek
+            execl(updaterExe.c_str(), updaterExe.c_str(), (char*)NULL);
             exit(0);
         }
-#endif
+    #endif
 
     } catch (const std::exception& e) {
         std::cerr << "[Patcher Hatası]: " << e.what() << std::endl;
